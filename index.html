@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador de Recomposição Salarial</title>
+
+    <!-- PWA manifest & theme -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0078d4" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+    <!-- html2canvas + jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+
+    <style>
+      :root {
+        --clr-bg: #f4f4f4;
+        --clr-white: #fff;
+        --clr-gray-light: #f9f9f9;
+        --clr-gray: #ececec;
+        --clr-gray-dark: #555;
+        --clr-primary: #0078d4;
+        --clr-text: #333;
+        --spacing: 1rem;
+        --radius: 0.5rem;
+        --font-base: 16px;
+        --line-height: 1.5;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--clr-bg);
+        font-family: "Segoe UI", sans-serif;
+        font-size: var(--font-base);
+        line-height: var(--line-height);
+        color: var(--clr-text);
+      }
+      #appContainer {
+        max-width: 640px;
+        margin: var(--spacing) auto;
+        background: var(--clr-white);
+        border: 1px solid var(--clr-gray);
+        border-radius: var(--radius);
+        padding: calc(var(--spacing) * 1.5);
+      }
+
+      /* Cabeçalho */
+      #appHeader {
+        text-align: center;
+        margin-bottom: calc(var(--spacing) * 1.5);
+      }
+      #appHeader img {
+        width: 64px;
+        margin-bottom: var(--spacing);
+      }
+      #appHeader .org-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0;
+      }
+      #appHeader .org-subtitle {
+        font-size: 0.875rem;
+        color: var(--clr-gray-dark);
+        margin: 0.25rem 0 var(--spacing);
+      }
+      #appHeader h1 {
+        font-size: 1.75rem;
+        margin: 0.25rem 0;
+      }
+      #appHeader p.tagline {
+        font-size: 0.875rem;
+        font-style: italic;
+        color: var(--clr-gray-dark);
+        margin: 0.5rem 0;
+      }
+
+      /* KPI Cards */
+      .kpi-cards {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing);
+        margin-bottom: calc(var(--spacing) * 1.5);
+      }
+      .kpi-cards .card {
+        flex: 1 1 180px;
+        min-width: 160px;
+        background: var(--clr-gray-light);
+        border-radius: var(--radius);
+        padding: var(--spacing);
+        text-align: center;
+      }
+      .kpi-cards .card .label {
+        font-size: 0.875rem;
+        color: var(--clr-gray-dark);
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+      }
+      .kpi-cards .card .value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        word-break: break-word;
+      }
+
+      /* Form Controls */
+      .controls-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing);
+        margin-bottom: calc(var(--spacing) * 1.5);
+      }
+      .control label {
+        display: block;
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+      }
+      .control input,
+      .control select {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 1rem;
+        border: 1px solid var(--clr-gray);
+        border-radius: var(--radius);
+      }
+
+      /* Slider */
+      .slider-control {
+        margin-bottom: calc(var(--spacing) * 1.5);
+      }
+      .slider-control label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+        display: block;
+      }
+      .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .slider-row input[type="range"] {
+        flex: 1;
+      }
+      .slider-value {
+        width: 60px;
+        text-align: right;
+        font-size: 0.875rem;
+        color: var(--clr-gray-dark);
+      }
+
+      /* Storytelling IPCA */
+      .storytelling {
+        margin: calc(var(--spacing) * 2) 0;
+      }
+      .storytelling p.intro {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+      }
+      .storytelling-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+      }
+      .storytelling-header img {
+        width: 24px;
+        height: 24px;
+      }
+      .storytelling-header span {
+        font-size: 1.125rem;
+        font-weight: 600;
+      }
+      .storytelling-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+      }
+      .storytelling-table th,
+      .storytelling-table td {
+        padding: 0.75rem;
+        border: 1px solid var(--clr-gray);
+      }
+      .storytelling-table th {
+        background: var(--clr-gray-light);
+        text-align: left;
+        font-weight: 600;
+      }
+      .storytelling-table tbody tr:nth-child(even) {
+        background: var(--clr-white);
+      }
+      .storytelling-table tbody tr:nth-child(odd) {
+        background: var(--clr-gray-light);
+      }
+      .storytelling-note {
+        font-size: 0.75rem;
+        color: var(--clr-gray-dark);
+        margin-top: 0.5rem;
+      }
+
+      /* Botões */
+      .btn-row {
+        display: flex;
+        gap: var(--spacing);
+        margin-top: calc(var(--spacing) * 2);
+      }
+      .btn-row button {
+        flex: 1;
+        padding: 0.75rem;
+        font-size: 1rem;
+        border: none;
+        border-radius: var(--radius);
+        cursor: pointer;
+        color: var(--clr-white);
+      }
+      #btnExportar {
+        background: var(--clr-primary);
+      }
+      #btnLimpar {
+        background: var(--clr-gray-dark);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="appContainer">
+      <!-- Cabeçalho -->
+      <div id="appHeader">
+        <img src="https://tse3.mm.bing.net/th?id=OIP.pLX8nJ-4tvBr-DXIPNti-QAAAA&cb=iwc1" alt="Logo da Instituição" />
+        <div class="org-title">Tribuna de Justiça do Estado do Pará</div>
+        <div class="org-subtitle">Secretária de Planejamento, Coordenação e Finanças</div>
+        <h1>Recomposição Salarial – Data-Base 2025</h1>
+        <p class="tagline">IPCA + Média dos últimos 2 anos do Crescimento de Receita própria do Pará</p>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-cards">
+        <div class="card">
+          <div class="label">Salário Base</div>
+          <div id="lblFolhaAtual" class="value">R$ 0,00</div>
+        </div>
+        <div class="card">
+          <div class="label">Salário Corrigido</div>
+          <div id="lblCorrigido" class="value">R$ 0,00</div>
+        </div>
+        <div class="card">
+          <div class="label">Perda Acumulada</div>
+          <div id="lblPerda" class="value">R$ 0,00</div>
+        </div>
+        <div class="card">
+          <div class="label">Fator de Correção</div>
+          <div id="lblFator" class="value">0,00 %</div>
+        </div>
+      </div>
+
+      <!-- Controles -->
+      <div class="controls-grid">
+        <div class="control">
+          <label for="inpSalarioBase">Salário Base (R$)</label>
+          <input id="inpSalarioBase" type="number" value="0" step="0.01" />
+        </div>
+        <div class="control">
+          <label for="selPeriodo">Mês/Ano</label>
+          <select id="selPeriodo"></select>
+        </div>
+      </div>
+
+      <!-- Slider -->
+      <div class="slider-control">
+        <label for="sldCrescimento">Média do Crescimento da Receita Estadual dos últimos 2 anos (%)</label>
+        <div class="slider-row">
+          <input id="sldCrescimento" type="range" min="0" max="15" step="0.1" value="0" />
+          <span id="lblCrescimentoValor" class="slider-value">0,0 %</span>
+        </div>
+      </div>
+
+      <!-- Storytelling IPCA -->
+      <div class="storytelling">
+        <p class="intro">
+          Vamos ver como o IPCA acumulado nos últimos 12 meses impacta seu poder de compra:
+        </p>
+        <div class="storytelling-header">
+          <img src="https://tse3.mm.bing.net/th?id=OIP.-ExVaWQaNBjMjpje1ufozwHaHa" alt="Ícone gráfico" />
+          <span>IPCA Acumulado 12 Meses</span>
+        </div>
+        <table class="storytelling-table">
+          <thead>
+            <tr><th>Mês</th><th>Acumulado</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Jan/2025</td><td>4,56 %</td></tr>
+            <tr><td>Fev/2025</td><td>5,06 %</td></tr>
+            <tr><td>Mar/2025</td><td>5,48 %</td></tr>
+            <tr><td>Abr/2025*</td><td>5,49 %</td></tr>
+          </tbody>
+        </table>
+        <p class="storytelling-note">
+          <strong>NOTA:</strong> O dado de abril refere-se ao IPCA-15, que é uma prévia da inflação oficial. O IPCA completo de abril será divulgado em 9 de maio de 2025.
+        </p>
+      </div>
+
+      <!-- Botões -->
+      <div class="btn-row">
+        <button id="btnExportar">Exportar PDF</button>
+        <button id="btnLimpar">Limpar</button>
+      </div>
+    </div>
+
+    <script>
+      const ipcaMap = {
+        "Jan/2025": 4.56,
+        "Fev/2025": 5.06,
+        "Mar/2025": 5.48,
+        "Abr/2025": 5.49,
+      };
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const sel = document.getElementById("selPeriodo");
+        Object.keys(ipcaMap).forEach(k => sel.add(new Option(k, k)));
+        sel.value = "Jan/2025";
+
+        ["inpSalarioBase", "selPeriodo", "sldCrescimento"]
+          .forEach(id => document.getElementById(id).addEventListener("input", updateAll));
+
+        document.getElementById("btnExportar").addEventListener("click", async () => {
+          document.querySelector(".btn-row").style.display = "none";
+          const canvas = await html2canvas(document.getElementById("appContainer"), { scale: 3, useCORS: true });
+          const imgData = canvas.toDataURL("image/png");
+          const pdf = new window.jspdf.jsPDF("p", "pt", "a4");
+          const pdfW = pdf.internal.pageSize.getWidth();
+          const pdfH = pdf.internal.pageSize.getHeight();
+          const margin = 20;
+          const ratio = Math.min((pdfW - margin*2)/canvas.width, (pdfH - margin*2)/canvas.height);
+          const imgW = canvas.width * ratio;
+          const imgH = canvas.height * ratio;
+          const x = (pdfW - imgW) / 2;
+          const y = margin;
+          pdf.addImage(imgData, "PNG", x, y, imgW, imgH);
+          pdf.save("recomposicao.pdf");
+          document.querySelector(".btn-row").style.display = "flex";
+        });
+
+        document.getElementById("btnLimpar").addEventListener("click", () => {
+          document.getElementById("inpSalarioBase").value = 0;
+          document.getElementById("selPeriodo").selectedIndex = 0;
+          document.getElementById("sldCrescimento").value = 0;
+          updateAll();
+        });
+
+        updateAll();
+
+        // registra o service worker
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW registrado:', reg.scope))
+            .catch(err => console.error('Falha ao registrar SW:', err));
+        }
+      });
+
+      function formatCurrency(v) {
+        return "R$ " + v.toFixed(2).replace(".", ",");
+      }
+
+      function updateAll() {
+        const salBase = +document.getElementById("inpSalarioBase").value || 0;
+        const per     = document.getElementById("selPeriodo").value;
+        const inf     = ipcaMap[per] || 0;
+        const cresc   = +document.getElementById("sldCrescimento").value || 0;
+        const pctTotal = inf + cresc;
+        const fator    = 1 + pctTotal / 100;
+        const salCorr  = salBase * fator;
+        const perda    = salCorr - salBase;
+
+        document.getElementById("lblFolhaAtual").textContent   = formatCurrency(salBase);
+        document.getElementById("lblCorrigido").textContent    = formatCurrency(salCorr);
+        document.getElementById("lblPerda").textContent        = formatCurrency(perda);
+        document.getElementById("lblFator").textContent        = pctTotal.toFixed(2).replace(".", ",") + " %";
+        document.getElementById("lblCrescimentoValor").textContent = cresc.toFixed(1).replace(".", ",") + " %";
+      }
+    </script>
+  </body>
+</html>
